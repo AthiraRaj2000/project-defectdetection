@@ -1,0 +1,37 @@
+from flask import Flask, jsonify
+import cv2
+import numpy as np
+from tensorflow.keras.models import load_model
+
+app = Flask(__name__)
+
+def predict_defect(image_path, model_path):
+    # Load the trained model
+    model = load_model(model_path)
+    
+    # Load and preprocess the image
+    image = cv2.imread(image_path)
+    image = cv2.resize(image, (100, 100))
+    image = image / 255.0  # Normalize pixel values
+    
+    # Make prediction
+    prediction = model.predict(np.array([image]))
+    
+    # Interpret prediction
+    if prediction[0] > 0.5:
+        return "Defect detected!"
+    else:
+        return "No defect detected."
+
+@app.route('/predict', methods=['GET'])
+def predict():
+    # Replace 'test.jpeg' with the path to your test image
+    image_path = 'test.jpeg'
+    # Replace 'new_defect_detection_model.h5' with the path to your trained model
+    model_path = 'new_defect_detection_model.h5'
+    
+    prediction = predict_defect(image_path, model_path)
+    return jsonify({'prediction': prediction})
+
+if __name__ == '__main__':
+    app.run(debug=True)

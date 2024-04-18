@@ -1,0 +1,64 @@
+import os
+import cv2
+import numpy as np
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+
+def load_data(data_dir):
+    images = []
+    labels = []
+    
+    for label in os.listdir(data_dir):
+        label_dir = os.path.join(data_dir, label)
+        for image_file in os.listdir(label_dir):
+            image_path = os.path.join(label_dir, image_file)
+            image = cv2.imread(image_path)
+            image = cv2.resize(image, (100, 100))  # Resize the image to a fixed size
+            images.append(image)
+            labels.append(label)  # Store the label name, not an integer
+    
+    images = np.array(images)
+    labels = np.array(labels)
+    
+    return images, labels
+
+def build_model(input_shape):
+    model = Sequential([
+        Conv2D(32, (3, 3), activation='relu', input_shape=input_shape),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        MaxPooling2D((2, 2)),
+        Conv2D(64, (3, 3), activation='relu'),
+        Flatten(),
+        Dense(64, activation='relu'),
+        Dense(1, activation='sigmoid')
+    ])
+    
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    
+    return model
+
+# Load data
+data_dir = 'train_data'
+images, labels = load_data(data_dir)
+
+# Convert labels to binary format (0 for 'ok_front', 1 for 'def_front')
+labels = np.array([1 if label == 'def_front' else 0 for label in labels])
+
+# Split data into training and testing sets
+train_images, test_images, train_labels, test_labels = train_test_split(images, labels, test_size=0.2, random_state=42)
+
+# Normalize pixel values to [0, 1]
+train_images = train_images / 255.0
+test_images = test_images / 255.0
+
+# Build the model
+input_shape = train_images[0].shape
+model = build_model(input_shape)
+
+# Train the model
+model.fit(train_images, train_labels, epochs=10, batch_size=32, validation_data=(test_images, test_labels))
+
+# Save the model
+model.save('new_defect_detection_model1.h5')
